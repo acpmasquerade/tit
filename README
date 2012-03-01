@@ -1,4 +1,5 @@
-Tiny Issue Tracker
+Tiny Issue Tracker 
+README ( original as shipped by Jwalanta's TIT ) -- needs to be updated
 ------------------
 
 Tiny Issue Tracker (TIT) is PHP/SQLite based, one-file issue tracker.
