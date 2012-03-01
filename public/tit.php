@@ -517,7 +517,7 @@ function unwatch($id){
 	</div>
 	<?php endif; ?>
 	<div id="footer">
-		Powered by <a href="https://github.com/jwalanta/tit" alt="Tiny Issue Tracker" target="_blank">Tiny Issue Tracker</a>
+		Powered by <a href="http://acpmasquerade.github.com/tit/" alt="Tiny Issue Tracker" target="_blank">Tiny Issue Tracker</a>
 	</div>
 </div>
 </body>
