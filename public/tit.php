@@ -1,32 +1,58 @@
 <?php
 /*
- *      Tiny Issue Tracker (TIT) v0.1
- * 		SQLite based, single file Issue Tracker
+ *      Tiny Issue Tracker (TIT) v0.2
+ * 		SQLite based, Issue Tracker
  * 
- *      Copyright 2010 Jwalanta Shrestha <jwalanta at gmail dot com>
+ *		Forked into Jwalanta's TIT by acpmasquerade <acpmasquerade at gmail dot com>
+ *		GNU GPL
+ *		
+ *		Original Credits 
+ *      Jwalanta Shrestha <jwalanta at gmail dot com>
  * 		GNU GPL
  */
 
-///////////////////
-// CONFIGURATION //
-///////////////////
 
-$TITLE = "My Project";				// Project Title
-$EMAIL = "noreply@mydomain.com";	// "From" email address for notifications
+// ---------------------------------------------------------------------//
+ // DO NOT EDIT ANYTHING BELOW, IF YOU ARE NOT SURE WHAT YOU ARE DOING //
+ // THERE IS NO CONFIGURATION In This FILE //
+ // ------------------------------------------------------------------//
 
+// Application Location
+$PUBROOT = realpath(dirname(__FILE__))."/";
+$APPROOT = realpath($PUBROOT."../")."/";
 
-//	Array of users. Format: array("username","md5_password","email")
-//	Note: "admin" user has special powers
+// Read the main app configuration file
+$APPCONFIG = parse_ini_file("{$APPROOT}config.ini", TRUE);
 
-$USERS = array(	array("admin",md5("admin"),"admin@mydomain.com"),
-				array("user",md5("user"),"user@mydomain.com")
-			  );
+// APP Version hardcoded
+$APPVERSION = "0.2";
 
-//	Location of SQLITE db file
-//	(If the file doesn't exist, a new one will be created.
-//	Make sure the folder is writable)
+//  Location of SQLITE db file
+//  (If the file doesn't exist, a new one will be created.
+//  Make sure the folder is writable)
+$SQLITE = @ $APPCONFIG["db"]["name"];
 
-$SQLITE = "tit.db";
+if(!$SQLITE){
+	die("Configuration ERROR. Application Database not defined. ");
+}else{
+	$SQLITE = $APPROOT ."db/".$SQLITE;
+}
+
+// Project Title
+$TITLE = @ $APPCONFIG["project"]["title"];
+// "From Email address" for notifications
+$EMAIL = @ $APPCONFIG["project"]["email"];
+
+// Users from configuration
+$USERS = @ $APPCONFIG["users"];
+
+if(!$USERS){
+	die("Configuration ERROR. Users not found");
+}
+
+foreach($USERS as $some_user_id=>$some_user_details){
+	$USERS[$some_user_id] = explode(",", $some_user_details);
+}
 
 //
 //	Select which notifications to send 
@@ -69,12 +95,18 @@ if (isset($_GET['logout'])){
 }
 
 if (isset($_GET['loginerror'])) $message = "Invalid username or password";
-$login_html = "<html><head><title>Tiny Issue Tracker</title><style>body,input{font-family:sans-serif;font-size:11px;} label{display:block;}</style></head>
-			   <body><h2>$TITLE - Issue Tracker</h2><p>$message</p><form method='POST'>
+$login_html = "<html><head><title>Tiny Issue Tracker - {$APPVERSION}</title><style>body{margin:20px auto; width:300px;border:1px solid #000;} body,input{font-family:sans-serif;font-size:11px;} label{display:block;} #wrapper{background:#fafafa;margin:0;padding:20px;}</style></head>
+			   <body>
+			   <div id=\"wrapper\">
+			   <h2>{$TITLE} - Issue Tracker</h2><p>{$message}</p><form method='POST'>
 			   <label>Username</label><input type='text' name='u' />
 			   <label>Password</label><input type='password' name='p' />
 			   <label></label><input type='submit' name='login' value='Login' />
-			   </form></body></html>";
+			   </form>
+			   <hr />
+			   powered by Tiny Issue Tracker - {$APPVERSION}
+			   </div>
+			   </body></html>";
 
 // show login page on bad credential
 if (check_credentials($_SESSION['u'], $_SESSION['p'])==-1) die($login_html);
