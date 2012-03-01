@@ -1,0 +1,14 @@
+---
+1st March, 2012
+-
+	* Started this Changelog (CHANGELOG) /CHANGELOG
+	* Added /public folder for public hosting of the tracker
+	* Moved /tit.php -> /public/tit.php
+	* Added a config file /config.ini for application configuration
+
+	* Added /db folder for SQLite Databases, only this folder has to be writeable
+
+---
+28th February, 2012
+-
+	* Forked Jwalanta's tit
