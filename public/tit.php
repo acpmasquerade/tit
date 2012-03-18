@@ -1,6 +1,6 @@
 <?php
 /*
- *      Tiny Issue Tracker (TIT) v0.2
+ *      Tiny Issue Tracker (TIT) v0.3b
  * 		SQLite based, Issue Tracker
  * 
  *		Forked into Jwalanta's TIT by acpmasquerade <acpmasquerade at gmail dot com>
@@ -25,7 +25,7 @@ $APPROOT = realpath($PUBROOT."../")."/";
 $APPCONFIG = parse_ini_file("{$APPROOT}config.ini", TRUE);
 
 // APP Version hardcoded
-$APPVERSION = "0.2";
+$APPVERSION = "0.3b";
 
 //  Location of SQLITE db file
 //  (If the file doesn't exist, a new one will be created.

@@ -6,6 +6,7 @@
     * Added /uploads folder to handle attachments
     * Added /.gitignore to ignore db files and uploaded files
     * Added Functionality to accept attachments
+    * Version upgrade to 0.3b
 
 ---
 1st March, 2012
