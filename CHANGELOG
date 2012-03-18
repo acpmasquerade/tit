@@ -1,4 +1,13 @@
 ---
+19th March, 2012
+-
+    * Added /rockingsoon.php - API Wrapper for RockingSoon Templates
+    * Implemented Rockingsoon templates for the homepage
+    * Added /uploads folder to handle attachments
+    * Added /.gitignore to ignore db files and uploaded files
+    * Added Functionality to accept attachments
+
+---
 1st March, 2012
 -
 	* Started this Changelog (CHANGELOG) /CHANGELOG

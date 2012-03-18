@@ -72,6 +72,21 @@ $NOTIFY["COMMENT_CREATE"] 	= TRUE;		// comment post
 // Here we go...
 session_start();
 
+// debug function
+// @acpmasquerade
+function mdie($var){
+    echo "<pre>";
+    print_r($var);
+    die();
+}
+
+// @acpmasquerade
+function ndie($var){
+    echo "<pre>";
+    print_r($var);
+    echo "</pre>";
+}
+
 // check for login post
 if (isset($_POST["login"])){
 	$n = check_credentials($_POST["u"],md5($_POST["p"]));
@@ -128,6 +143,7 @@ if (!($db = sqlite_open($SQLITE, 0666, $sqliteerror))) {
 // create tables if not exist
 @sqlite_query($db, 'CREATE TABLE issues (id INTEGER PRIMARY KEY, title TEXT, description TEXT, user TEXT, status INTEGER, priority INTEGER, notify_emails INTEGER, entrytime DATETIME)');
 @sqlite_query($db, 'CREATE TABLE comments (id INTEGER PRIMARY KEY, issue_id INTEGER, user TEXT, description TEXT, entrytime DATETIME)');
+@sqlite_query($db, 'CREATE TABLE attachments (id INTEGER PRIMARY KEY, issue_id INTEGER, user TEXT, filename TEXT, filepath TEXT, mimetype TEXT, entrytime DATETIME)');
 
 if (isset($_GET["id"])){
 	// show issue #id
@@ -135,7 +151,7 @@ if (isset($_GET["id"])){
 	$id=sqlite_escape_string($_GET['id']);
 	$issue = sqlite_array_query($db, "SELECT id, title, description, user, status, priority, notify_emails, entrytime FROM issues WHERE id='$id'");
 	$comments = sqlite_array_query($db, "SELECT id, user, description, entrytime FROM comments WHERE issue_id='$id' ORDER BY entrytime ASC");
-
+    $attachments = sqlite_array_query($db, "SELECT id, issue_id, user, filename, filepath, mimetype, entrytime FROM attachments WHERE issue_id='$id'");    
 }
 
 // if no issue found, go to list mode
@@ -144,11 +160,28 @@ if (count($issue)==0){
 	unset($issue, $comments);
 	// show all issues
 
-	if (isset($_GET["resolved"])) 
+	if (isset($_GET["resolved"])) {
 		$issues = sqlite_array_query($db, "SELECT id, title, description, user, status, priority, notify_emails, entrytime FROM issues WHERE status=1 ORDER BY priority, entrytime DESC");
-	else 
+    }
+	else {
 		$issues = sqlite_array_query($db, "SELECT id, title, description, user, status, priority, notify_emails, entrytime FROM issues WHERE (status=0 OR status IS NULL) ORDER BY priority, entrytime DESC");
-	
+    }
+
+    // loop through the issues
+    $issue_ids = array();
+    foreach($issues as $some_issue){
+        $issue_ids[] = $some_issue["id"];
+    }
+
+    $issue_ids_csv = implode(",", $issue_ids);
+
+    $attachments_raw = sqlite_array_query($db, "SELECT count(*) files, issue_id FROM attachments WHERE issue_id IN ('$issue_ids_csv') group by issue_id ");
+
+    $attachments = array();
+    foreach($attachments_raw as $attachment_row){
+        $attachments[$attachment_row["issue_id"]] = $attachment_row["files"];
+    }
+
 	$mode="list";
 }
 else {
@@ -162,10 +195,34 @@ else {
 
 // Create / Edit issue
 if (isset($_POST["createissue"])){
-	
+
+    // Issue fields
 	$id=sqlite_escape_string($_POST['id']);
 	$title=sqlite_escape_string($_POST['title']);
 	$description=sqlite_escape_string($_POST['description']);
+
+    // Attachments
+    $attachments = $_FILES["uploaded"];
+
+    $attachments_accepted = array();
+    $attachments_allowed_mimes = array("image", "text");
+    
+    foreach($attachments["name"] as $attachment_no => $attachment_filename){
+        if($attachments["error"][$attachment_no] > 0){
+            continue;
+        }else{
+            // check the mime type
+            $attachment_mime_type = explode("/", $attachments["type"][$attachment_no]);
+            $attachment_mime_type_prefix = strtolower($attachment_mime_type[0]);
+
+            if(in_array($attachment_mime_type_prefix, $attachments_allowed_mimes)){
+                $attachments_accepted[] = $attachment_no;
+            }else{
+                // skip the attachment, and mark it as invalid. 
+            }
+        }
+    }
+
 	$user=$_SESSION['u'];
 	$now=date("Y-m-d H:i:s");
 	
@@ -176,10 +233,11 @@ if (isset($_POST["createissue"])){
 	}
 	$notify_emails = implode(",",$emails);
 	
-	if ($id=='')
+	if ($id==''){
 		$query = "INSERT INTO issues (title, description, user, priority, notify_emails, entrytime) values('$title','$description','$user','2','$notify_emails','$now')"; // create
-	else
+    }else{
 		$query = "UPDATE issues SET title='$title', description='$description' WHERE id='$id'"; // edit
+    }
 
 	if (trim($title)!='') {		// title cant be blank
 		@sqlite_query($db, $query);
@@ -198,6 +256,28 @@ if (isset($_POST["createissue"])){
 						"[$TITLE] Issue Edited",
 						"Issue edited by {$_SESSION['u']}\r\nTitle: $title\r\nURL: http://{$_SERVER['HTTP_HOST']}{$_SERVER['PHP_SELF']}?id=$id");			
 		}
+
+        // proceed with attachments
+        foreach($attachments_accepted as $attachment_no){
+
+            $attachment_original_filename = $attachments["name"][$attachment_no];
+            $attachment_slug = preg_replace("/[^0-9a-zA-Z_\.\-]+/", "", $attachment_original_filename);
+            
+            $attachment_tempname = $attachments["tmp_name"][$attachment_no];
+            $attachment_newfilename = time()."_".md5($attachment_tempname)."_".$attachment_slug;
+                    
+            move_uploaded_file( $attachment_tempname , $APPROOT ."uploads/" . $attachment_newfilename );
+            
+            $attachment_filename = $attachments["name"][$attachment_no];
+            $attachment_filepath = $attachment_newfilename;
+            $attachment_mimetype = $attachments["type"][$attachment_no];
+
+            //(id INTEGER PRIMARY KEY, issue_id INTEGER, user TEXT, filename TEXT, filepath TEXT, mimetype TEXT, entrytime DATETIME)
+            $attachment_query = "INSERT INTO attachments (issue_id, user, filename, filepath, mimetype, entrytime )
+                    values('$id', '$user','$attachment_filename','$attachment_filepath','$attachment_mimetype', '$now')"; // create
+
+            @sqlite_query($db, $attachment_query);
+        }
 	}
 	
 	header("Location: {$_SERVER['PHP_SELF']}");
@@ -312,6 +392,22 @@ if (isset($_GET["deletecomment"])){
 	header("Location: {$_SERVER['PHP_SELF']}?id=$id");
 }
 
+// Download File
+if (isset($_GET["file"])){
+    $file_requested = sqlite_escape_string($_GET["file"]);
+    $file_information = sqlite_array_query($db, "SELECT * from attachments WHERE filepath = '{$file_requested}' LIMIT 1");
+
+    if(!$file_information){
+        die("File Not Found");
+    }else{        
+        $file_information = $file_information[0];
+        $file_mimetype = $file_information["mimetype"];
+        header("Content-Type: {$file_mimetype}");
+        echo file_get_contents($APPROOT ."uploads/".$file_information["filepath"]);
+        die();
+    }
+}
+
 //
 // 	FUNCTIONS 
 //
@@ -412,6 +508,7 @@ function unwatch($id){
 		.issue{padding:10px 20px; margin: 10px 0; background-color: #f2f2f2;}
 		.comment{padding:5px 10px 10px 10px; margin: 10px 0; border: 1px solid #ccc;}
 		.comment-meta{color: #666;}
+        .attachments_wrapper{background:white;padding:10px;}
 		.p1, .p1 a{color: red;}
 		.p3, .p3 a{color: #666;}
 		.hide{display:none;}
@@ -434,10 +531,26 @@ function unwatch($id){
 	<h2><a href="#" onclick="document.getElementById('create').className='';document.getElementById('title').focus();"><?php echo ($issue['id']==''?"Create":"Edit"); ?> Issue</a></h2>
 	<div id="create" class='<?php echo isset($_GET['editissue'])?'':'hide'; ?>'>
 		<a href="#" onclick="document.getElementById('create').className='hide';" style="float: right;">[Close]</a>
-		<form method="POST">
+		<form method="POST" enctype="multipart/form-data">
 			<input type="hidden" name="id" value="<?php echo $issue['id']; ?>" />
 			<label>Title</label><input type="text" size="50" name="title" id="title" value="<?php echo stripslashes($issue['title']); ?>" /> 
 			<label>Description</label><textarea name="description" rows="5" cols="50"><?php echo stripslashes($issue['description']); ?></textarea>
+            <label>Attachments</label>
+
+            <?php if($attachments): ?>
+            <ul>
+                <?php foreach($attachments as $a): ?>
+                <li>
+                    <?php echo $a["filename"]; ?>
+                </li>
+                <?php endforeach;?>
+            </ul>
+            <?php endif; ?>
+            
+            <input name="uploaded[]" type="file" /><br />
+            <input name="uploaded[]" type="file" /><br />
+            <input name="uploaded[]" type="file" /><br />
+            <input name="uploaded[]" type="file" /><br />
 			<label></label><input type="submit" name="createissue" value="<?php echo ($issue['id']==''?"Create":"Edit"); ?>" />
 		</form>
 	</div>
@@ -448,10 +561,11 @@ function unwatch($id){
 		<table border=1 cellpadding=5 width="100%">
 			<tr>
 				<th width="5%">S.No.</th>
-				<th width="40%">Title</th>
-				<th width="15%">Created by</th>
-				<th width="20%">Date</th>
-				<th width="5%%">Watch</th>
+                <th width="5%">Files</th>
+				<th width="45%">Issue</th>
+				<th width="15%">Created by</th>                
+				<th width="15%">Date</th>
+				<th width="5%">Watch</th>
 				<th width="15%">Actions</th>
 			</tr>
 		
@@ -460,6 +574,11 @@ function unwatch($id){
 			foreach ($issues as $issue){
 				echo "<tr class='p{$issue['priority']}'>\n"; 
 				echo "<td>".$count++."</a></td>\n";
+                if($attachments[$issue["id"]]){
+                    echo "<td>{$attachments[$issue["id"]]}</td>\n";
+                }else{
+                    echo "<td>-</td>\n";
+                }
 				echo "<td><a href='?id={$issue['id']}'>{$issue['title']}</a></td>\n";
 				echo "<td>{$issue['user']}</td>\n";
 				echo "<td>{$issue['entrytime']}</td>\n";
@@ -481,6 +600,19 @@ function unwatch($id){
 		<div class="issue">
 			<h2><?php echo htmlentities(stripslashes($issue['title']),ENT_COMPAT,"UTF-8"); ?></h2>
 			<p><?php echo str_replace("\n","<br />",htmlentities(stripslashes($issue['description']),ENT_COMPAT,"UTF-8")); ?></p>
+            <?php if($attachments): ?>
+            <hr />
+            <div class="attachments_wrapper">
+                <strong>Attachments</strong>
+                <ul class="attachments">
+                    <?php foreach($attachments as $a): ?>
+                    <li>
+                        <a href="<?php echo $_SERVER['PHP_SELF']; ?>?file=<?php echo $a["filepath"];?>"><?php echo $a["filename"];?></a>
+                    </li>
+                    <?php endforeach;?>
+                </ul>
+            </div>
+            <?php endif; ?>
 		</div>
 		<div class='left'>
 			Priority <select name="priority" onchange="location='<?php echo $_SERVER['PHP_SELF']; ?>?changepriority&id=<?php echo $issue['id']; ?>&priority='+this.value">
