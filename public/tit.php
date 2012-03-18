@@ -95,24 +95,35 @@ if (isset($_GET['logout'])){
 }
 
 if (isset($_GET['loginerror'])) $message = "Invalid username or password";
-$login_html = "<html><head><title>Tiny Issue Tracker - {$APPVERSION}</title><style>body{margin:20px auto; width:300px;border:1px solid #000;} body,input{font-family:sans-serif;font-size:11px;} label{display:block;} #wrapper{background:#fafafa;margin:0;padding:20px;}</style></head>
-			   <body>
-			   <div id=\"wrapper\">
-			   <h2>{$TITLE} - Issue Tracker</h2><p>{$message}</p><form method='POST'>
+$login_html = "<h2>{$TITLE} - Issue Tracker</h2><p>{$message}</p><form method='POST'>
 			   <label>Username</label><input type='text' name='u' />
 			   <label>Password</label><input type='password' name='p' />
 			   <label></label><input type='submit' name='login' value='Login' />
 			   </form>
-			   <hr />
-			   powered by Tiny Issue Tracker - {$APPVERSION}
-			   </div>
-			   </body></html>";
+			   ";
 
 // show login page on bad credential
-if (check_credentials($_SESSION['u'], $_SESSION['p'])==-1) die($login_html);
+if (check_credentials($_SESSION['u'], $_SESSION['p'])==-1){
+    // Load the RockingSoon API and create some design type page.
+    include_once $APPROOT . "rockingsoon.php";
+
+    $rocking_soon_data = array();
+    $rocking_soon_data["logo"] = "TIT - {$APPVERSION}";
+    $rocking_soon_data["tagline"] = "Login";
+    $rocking_soon_data["footer"] = "powered by Tiny Issue Tracker - {$APPVERSION}";
+
+    $rocking_soon_template = rocking_soon($rocking_soon_data);
+
+    print $rocking_soon_template->header;
+    print $login_html;
+    print $rocking_soon_template->footer;
+    die("\n");
+}
 
 // Check if db exists
-if (!($db = sqlite_open($SQLITE, 0666, $sqliteerror))) die($sqliteerror);
+if (!($db = sqlite_open($SQLITE, 0666, $sqliteerror))) {
+    die($sqliteerror);
+}
 
 // create tables if not exist
 @sqlite_query($db, 'CREATE TABLE issues (id INTEGER PRIMARY KEY, title TEXT, description TEXT, user TEXT, status INTEGER, priority INTEGER, notify_emails INTEGER, entrytime DATETIME)');
