@@ -7,6 +7,7 @@
     * Added /.gitignore to ignore db files and uploaded files
     * Added Functionality to accept attachments
     * Version upgrade to 0.3b
+    * Git TAG - VERSION_0.3b_w_ATTACHMENTS
 
 ---
 1st March, 2012
