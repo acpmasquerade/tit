@@ -51,7 +51,7 @@
 			RockingSoon	ALLOWED KEYS
 		**/
 
-		$RS_ALLOWED_KEYS = array("footer", "logo", "tagline");
+		$RS_ALLOWED_KEYS = array("footer", "logo", "tagline", "bottomline");
 
 
 		foreach($postdata as $key=>$value){
