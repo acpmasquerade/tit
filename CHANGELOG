@@ -1,4 +1,9 @@
 ---
+24th March, 2012
+-
+	* index.php added in the /public folder which simply invokes the /public/tit.php
+
+---
 19th March, 2012
 -
     * Added /rockingsoon.php - API Wrapper for RockingSoon Templates
