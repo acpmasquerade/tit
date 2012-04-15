@@ -22,7 +22,8 @@
 
 		error_reporting(E_ALL);
 
-        $url = "http://116.90.235.66/rockingsoon.alternate/api.php";
+        $url = "http://apps.rockingsoon.com/alternate";
+
         $ch = curl_init();
 
         // set the target url
